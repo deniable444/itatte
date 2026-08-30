@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LINE 채팅 생성기</title>
+  <title>LINE</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 
   <style>
     /* ===========================
-       전역 설정 및 배경 (#9dbfb2)
+       전역 설정 및 배경 (연한 노란색)
        =========================== */
     body {
       margin: 0;
       padding: 0;
-      background-color: #9dbfb2;
+      background-color: #fffde7; /* 연한 노란색 배경 */
       font-family: 'Noto Sans KR', sans-serif;
       display: flex;
       justify-content: center;
@@ -86,7 +86,7 @@
     .chat-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
 
     /* ===========================
-       말풍선 서식 (시간 삭제됨)
+       말풍선 서식
        =========================== */
     .msg-wrapper { 
       display: flex; 
@@ -103,6 +103,7 @@
       font-size: 0.95rem;
       line-height: 1.4;
       word-break: break-word; 
+      white-space: pre-wrap; /* 줄바꿈(엔터)이 그대로 표시되도록 설정 */
       transition: filter 0.2s ease; 
       cursor: default;
       box-shadow: 0 1px 2px rgba(0,0,0,0.1);
@@ -119,8 +120,8 @@
       min-height: 70px;
       background-color: #f5f5f5;
       display: flex;
-      align-items: center;
-      padding: 10px 15px;
+      align-items: flex-end; /* 텍스트창이 길어지면 버튼들이 아래 바닥에 정렬되도록 */
+      padding: 10px 15px 15px 15px;
       box-sizing: border-box;
       gap: 8px;
       z-index: 5;
@@ -128,16 +129,20 @@
     
     /* 발신인/수신인 토글 버튼 */
     .toggle-btn {
-      padding: 8px 12px;
+      flex-shrink: 0; /* 밀림 방지 */
+      width: 85px;    /* 너비 고정 (글씨가 바뀌어도 크기 안 변함) */
+      height: 38px;
       border: none;
       border-radius: 20px;
       font-size: 0.8rem;
       font-weight: bold;
       cursor: pointer;
       color: #111;
-      background-color: #8de055; /* 기본값: 나(초록색) */
+      background-color: #8de055;
       transition: background-color 0.2s, color 0.2s;
-      white-space: nowrap;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .toggle-btn.other {
       background-color: #ffffff;
@@ -145,20 +150,28 @@
       border: 1px solid #ccc;
     }
 
-    /* 텍스트 입력 칸 */
+    /* 자동으로 늘어나는 텍스트 입력 칸 (textarea 적용) */
     .real-input {
       flex: 1;
-      height: 38px;
+      min-width: 0; /* flex 환경에서 찌그러짐 방지 */
+      min-height: 38px;
+      max-height: 120px; /* 너무 길어지면 입력창 안에서 스크롤됨 */
       background-color: #ffffff;
       border: 1px solid #dddddd;
       border-radius: 20px;
-      padding: 0 15px;
+      padding: 8px 15px;
       font-size: 0.95rem;
       outline: none;
+      resize: none; /* 유저가 임의로 크기 조절 못하게 막음 */
+      overflow-y: auto;
+      font-family: inherit;
+      box-sizing: border-box;
+      line-height: 1.4;
     }
 
     /* 전송 버튼 */
     .real-send-btn {
+      flex-shrink: 0; /* 밀림 방지 */
       width: 38px; height: 38px;
       background-color: #007aff;
       border: none;
@@ -185,24 +198,18 @@
     <div class="notch"></div>
 
     <div class="chat-header">
-      <span>田辺 歩</span>
+      <span>イタダ</span>
     </div>
 
     <!-- 채팅 본문 영역 -->
-    <div class="chat-body" id="chat-box">
-      <!-- 처음 화면이 텅 비어있지 않도록 샘플 메시지 1개 배치 -->
-      <div class="msg-wrapper received">
-        <div class="bubble">아래 입력창에서 메시지를 작성해 보세요! 버튼을 눌러 말하는 사람을 바꿀 수 있습니다.</div>
-      </div>
-    </div>
 
     <!-- 하단 입력창 -->
     <div class="input-area">
       <!-- 토글 버튼 -->
       <button class="toggle-btn" id="sender-toggle" onclick="toggleSender()">나 (송신)</button>
       
-      <!-- 텍스트 입력칸 (엔터키 누르면 전송됨) -->
-      <input type="text" class="real-input" id="message-input" placeholder="메시지 입력..." onkeypress="handleKeyPress(event)">
+      <!-- 텍스트 입력칸 (글자가 길어지면 위로 늘어남) -->
+      <textarea class="real-input" id="message-input" rows="1" placeholder="메시지 입력..." oninput="autoResize(this)" onkeypress="handleKeyPress(event)"></textarea>
       
       <!-- 전송 버튼 -->
       <button class="real-send-btn" onclick="sendMessage()">➤</button>
@@ -210,13 +217,12 @@
   </div>
 
   <script>
-    // 현재 말하는 사람이 '나'인지 확인하는 변수 (true: 나, false: 상대방)
     let isMe = true;
 
     // 말하는 사람(발신/수신)을 바꾸는 함수
     function toggleSender() {
       const toggleBtn = document.getElementById('sender-toggle');
-      isMe = !isMe; // 상태 반전
+      isMe = !isMe; 
 
       if (isMe) {
         toggleBtn.textContent = '나 (송신)';
@@ -226,13 +232,19 @@
         toggleBtn.classList.add('other');
       }
       
-      // 토글 후 입력창으로 다시 포커스 맞추기
       document.getElementById('message-input').focus();
     }
 
-    // 엔터키를 눌렀을 때도 전송되게 하는 함수
+    // 입력창 글자 길이에 맞춰 높이를 자동으로 늘려주는 함수
+    function autoResize(textarea) {
+      textarea.style.height = 'auto'; // 높이 초기화
+      textarea.style.height = textarea.scrollHeight + 'px'; // 들어간 내용물의 스크롤 높이만큼 재설정
+    }
+
+    // 엔터키 처리 함수 (Shift+Enter는 줄바꿈, 그냥 Enter는 전송)
     function handleKeyPress(event) {
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); // 기본 엔터(줄바꿈) 작동 방지
         sendMessage();
       }
     }
@@ -243,14 +255,17 @@
       const chatBox = document.getElementById('chat-box');
       const text = inputField.value.trim(); // 양쪽 공백 제거
 
-      // 입력된 내용이 없으면 아무 일도 하지 않음
-      if (text === '') return;
+      if (text === '') {
+        // 전송 후 빈칸일 때 높이를 리셋하기 위한 예외처리
+        inputField.value = '';
+        inputField.style.height = 'auto';
+        return;
+      }
 
-      // 새 메시지를 담을 컨테이너 만들기
+      // 새 메시지를 담을 컨테이너
       const msgWrapper = document.createElement('div');
       msgWrapper.classList.add('msg-wrapper');
       
-      // 보낸 사람에 따라 클래스(sent/received) 부여
       if (isMe) {
         msgWrapper.classList.add('sent');
       } else {
@@ -260,14 +275,14 @@
       // 말풍선 만들기
       const bubble = document.createElement('div');
       bubble.classList.add('bubble');
-      bubble.textContent = text; // 입력한 텍스트 넣기
+      bubble.textContent = text; 
 
-      // 조립하기
       msgWrapper.appendChild(bubble);
       chatBox.appendChild(msgWrapper);
 
-      // 입력창 비우기
+      // 텍스트 비우고 입력창 높이 원래대로 복구
       inputField.value = '';
+      inputField.style.height = 'auto';
 
       // 가장 최근 메시지(맨 아래)로 스크롤 이동
       chatBox.scrollTop = chatBox.scrollHeight;
