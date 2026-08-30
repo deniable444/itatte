@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LINE 채팅 생성기</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===========================
+       전역 설정 및 배경 (#9dbfb2)
+       =========================== */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #9dbfb2;
+      font-family: 'Noto Sans KR', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden; 
+    }
+
+    /* ===========================
+       휴대폰 그래픽 레이아웃
+       =========================== */
+    .phone-container {
+      width: 100%;
+      max-width: 375px;        
+      height: 100%;
+      max-height: 812px;       
+      background-color: #8ba8ca; 
+      border: 12px solid #1c1c1c; 
+      border-radius: 40px; 
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    /* 아이폰 노치 */
+    .notch {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 140px; height: 25px;
+      background-color: #1c1c1c;
+      border-bottom-left-radius: 15px;
+      border-bottom-right-radius: 15px;
+      z-index: 30;
+    }
+
+    /* 상단 채팅방 이름 영역 */
+    .chat-header {
+      height: 85px;
+      background-color: transparent; 
+      display: flex;
+      justify-content: center; 
+      align-items: flex-end;
+      padding: 0 20px 15px;
+      box-sizing: border-box;
+      color: #333;
+      font-weight: 700;
+      font-size: 1.1rem;
+      z-index: 25;
+    }
+
+    /* ===========================
+       채팅창 본문 영역
+       =========================== */
+    .chat-body {
+      flex: 1;
+      overflow-y: auto; 
+      padding: 10px 15px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth; 
+    }
+    
+    .chat-body::-webkit-scrollbar { width: 5px; }
+    .chat-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+
+    /* ===========================
+       말풍선 서식 (시간 삭제됨)
+       =========================== */
+    .msg-wrapper { 
+      display: flex; 
+      align-items: flex-end; 
+      width: 100%; 
+    }
+    .msg-wrapper.received { justify-content: flex-start; } 
+    .msg-wrapper.sent { justify-content: flex-end; }       
+
+    .bubble {
+      max-width: 70%; 
+      padding: 8px 12px;
+      border-radius: 15px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-break: break-word; 
+      transition: filter 0.2s ease; 
+      cursor: default;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .bubble:hover { filter: brightness(0.9); }
+
+    .received .bubble { background-color: #ffffff; color: #333333; border-top-left-radius: 3px; }
+    .sent .bubble { background-color: #8de055; color: #111111; border-top-right-radius: 3px; }
+
+    /* ===========================
+       하단 실제 입력창 영역
+       =========================== */
+    .input-area {
+      min-height: 70px;
+      background-color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      padding: 10px 15px;
+      box-sizing: border-box;
+      gap: 8px;
+      z-index: 5;
+    }
+    
+    /* 발신인/수신인 토글 버튼 */
+    .toggle-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      cursor: pointer;
+      color: #111;
+      background-color: #8de055; /* 기본값: 나(초록색) */
+      transition: background-color 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+    .toggle-btn.other {
+      background-color: #ffffff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+
+    /* 텍스트 입력 칸 */
+    .real-input {
+      flex: 1;
+      height: 38px;
+      background-color: #ffffff;
+      border: 1px solid #dddddd;
+      border-radius: 20px;
+      padding: 0 15px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    /* 전송 버튼 */
+    .real-send-btn {
+      width: 38px; height: 38px;
+      background-color: #007aff;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #ffffff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .real-send-btn:hover { opacity: 0.8; }
+
+    @media (max-width: 500px) {
+      .phone-container { max-width: 100vw; max-height: 100vh; border: none; border-radius: 0; }
+      .notch { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="phone-container">
+    <div class="notch"></div>
+
+    <div class="chat-header">
+      <span>田辺 歩</span>
+    </div>
+
+    <!-- 채팅 본문 영역 -->
+    <div class="chat-body" id="chat-box">
+      <!-- 처음 화면이 텅 비어있지 않도록 샘플 메시지 1개 배치 -->
+      <div class="msg-wrapper received">
+        <div class="bubble">아래 입력창에서 메시지를 작성해 보세요! 버튼을 눌러 말하는 사람을 바꿀 수 있습니다.</div>
+      </div>
+    </div>
+
+    <!-- 하단 입력창 -->
+    <div class="input-area">
+      <!-- 토글 버튼 -->
+      <button class="toggle-btn" id="sender-toggle" onclick="toggleSender()">나 (송신)</button>
+      
+      <!-- 텍스트 입력칸 (엔터키 누르면 전송됨) -->
+      <input type="text" class="real-input" id="message-input" placeholder="메시지 입력..." onkeypress="handleKeyPress(event)">
+      
+      <!-- 전송 버튼 -->
+      <button class="real-send-btn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <script>
+    // 현재 말하는 사람이 '나'인지 확인하는 변수 (true: 나, false: 상대방)
+    let isMe = true;
+
+    // 말하는 사람(발신/수신)을 바꾸는 함수
+    function toggleSender() {
+      const toggleBtn = document.getElementById('sender-toggle');
+      isMe = !isMe; // 상태 반전
+
+      if (isMe) {
+        toggleBtn.textContent = '나 (송신)';
+        toggleBtn.classList.remove('other');
+      } else {
+        toggleBtn.textContent = '상대 (수신)';
+        toggleBtn.classList.add('other');
+      }
+      
+      // 토글 후 입력창으로 다시 포커스 맞추기
+      document.getElementById('message-input').focus();
+    }
+
+    // 엔터키를 눌렀을 때도 전송되게 하는 함수
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    // 메시지를 화면에 추가하는 함수
+    function sendMessage() {
+      const inputField = document.getElementById('message-input');
+      const chatBox = document.getElementById('chat-box');
+      const text = inputField.value.trim(); // 양쪽 공백 제거
+
+      // 입력된 내용이 없으면 아무 일도 하지 않음
+      if (text === '') return;
+
+      // 새 메시지를 담을 컨테이너 만들기
+      const msgWrapper = document.createElement('div');
+      msgWrapper.classList.add('msg-wrapper');
+      
+      // 보낸 사람에 따라 클래스(sent/received) 부여
+      if (isMe) {
+        msgWrapper.classList.add('sent');
+      } else {
+        msgWrapper.classList.add('received');
+      }
+
+      // 말풍선 만들기
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      bubble.textContent = text; // 입력한 텍스트 넣기
+
+      // 조립하기
+      msgWrapper.appendChild(bubble);
+      chatBox.appendChild(msgWrapper);
+
+      // 입력창 비우기
+      inputField.value = '';
+
+      // 가장 최근 메시지(맨 아래)로 스크롤 이동
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
